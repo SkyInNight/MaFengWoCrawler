@@ -7,9 +7,6 @@ import requests
 from requests import exceptions
 import configparser
 
-cf = configparser.ConfigParser()
-cf.read("../config/config.conf")
-
 
 def is_open(ip_, port_):
     """
@@ -34,8 +31,11 @@ class ProxyPool(object):
     """
 
     def __init__(self, max_size):
+        self.__cf = configparser.ConfigParser()
+        self.__cf.read("../config/config.conf")
         self.__max_size = max_size
         self.__ip_queue = queue.Queue(max_size)
+        self.__current_ip = None
         status = self.request_ip(max_size)
         if status == "wait":
             print("ip地址获取出错，请保存数据退出")
@@ -45,6 +45,9 @@ class ProxyPool(object):
             print("获取ip地址成功{0}".format(ip))
 
     def get_proxy(self):
+        if self.__current_ip is not None:
+            self.__ip_queue.put(self.__current_ip)
+            self.__current_ip = None
         if self.__ip_queue.empty():
             status = self.request_ip(self.__max_size)
             if status == "wait":
@@ -55,17 +58,20 @@ class ProxyPool(object):
         ip_ = self.__ip_queue.get()
         if is_open(ip_['ip'], ip_['port']):
             proxy = {'http': ip_['ip'] + ":" + ip_['port']}
-            self.__ip_queue.put(ip_)
+            self.__current_ip = ip_
             return proxy
         else:
-            self.get_proxy()
+            return self.get_proxy()
+
+    def drop_current_ip(self):
+        self.__current_ip = None
 
     def request_ip(self, num):
         # 为了防止获取上一次的ip地址，这里强制在获取地址前先休眠1秒钟
         time.sleep(1)
         if num > 50 or num < 1:
             num = 10
-        url = cf.get('proxy', 'url') + str(num)
+        url = self.__cf.get('proxy', 'url') + str(num)
         try:
             response = requests.get(url)
             if response.status_code == 112:
