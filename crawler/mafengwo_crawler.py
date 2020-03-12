@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
-from html_parser.mafengwo_parser import CityParser
 import queue
+import os, sys
 import json
 import time
 from fake_useragent import UserAgent
 from multiprocessing import Process, Pool, freeze_support
-from tools.proxy_pool import ProxyPool
 import requests
+from html_parser.mafengwo_parser import CityParser
+from tools.proxy_pool import ProxyPool
+
+# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 当前程序上上一级目录
+# sys.path.append(BASE_DIR)  # 添加环境变量
 
 
 def crawler(url, proxy_pool_=None, headers=None):
@@ -19,8 +23,8 @@ def crawler(url, proxy_pool_=None, headers=None):
             headers=headers,
             proxies=proxy,
             timeout=10)
-        response.raise_for_status()
         response.encoding = response.apparent_encoding
+        response.raise_for_status()
         return response
     except Exception as e:
         print(e)
@@ -148,14 +152,13 @@ if __name__ == '__main__':
         {"湘西": r'13287'}
     ]
     """
-        
+        """
     for index in city_list:
         # proxy_pool = ProxyPool(1)
         print(city_crawler(index, 1))
 
-    """
     """ 获取top5和热门景点
-    """
+
     pool = Pool(processes=14)
     for city in city_list:
         # proxy_pool = ProxyPool(1)
@@ -169,7 +172,7 @@ if __name__ == '__main__':
             callback=callbacks)
     pool.close()
     pool.join()
-
+        """
     """
     sAct: KMdd_StructWebAjax|GetPoisByTag
 iMddid: 10466
