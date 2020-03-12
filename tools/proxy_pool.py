@@ -4,7 +4,6 @@ import socket
 import time
 import json
 import requests
-from requests import exceptions
 import configparser
 
 
@@ -25,19 +24,6 @@ def is_open(ip_, port_):
 
 
 class ProxyPool(object):
-    """
-    { code: "0",
-    msg: "ok",
-    obj: [ { port: "28635",
-    ip: "113.94.123.104" },
-    { port: "40782",
-    ip: "36.22.79.124" },
-    { port: "42269",
-    ip: "117.69.151.229" } ],
-    errno: 0,
-     data: [ null ] }
-    url = '
-    """
 
     def __init__(self, max_size=50):
         self.__cf = configparser.ConfigParser()
@@ -47,15 +33,6 @@ class ProxyPool(object):
         self.__max_size = max_size
         self.__ip_queue = queue.Queue(max_size)
         self.__current_ip = None
-        """
-        status = self.request_ip(max_size)
-        if status == "wait":
-            print("ip地址获取出错，请保存数据退出")
-        elif status == "success":
-            ip = self.__ip_queue.get()
-            self.__ip_queue.put(ip)
-            print("获取ip地址成功{0}".format(ip))
-        """
 
     @property
     def ip_queue(self):
@@ -69,6 +46,9 @@ class ProxyPool(object):
         url_list = json.loads(self.__cf.get('proxy', 'url'))
         if len(url_list) == 0:
             return "wait"
+        # 单个api最多允许一次请求50条如果平均分摊超过最大上限，则自动降低要求。
+        if num_ > len(url_list) * 50:
+            num_ = len(url_list) * 30
         if num_ / len(url_list) == 0:
             return self.request_ip(url_list[0], num_)
         else:
