@@ -1,38 +1,43 @@
 # -*- coding: utf-8 -*-
 import queue
-import os, sys
+import os
+import sys
 import json
 import time
 from fake_useragent import UserAgent
 from multiprocessing import Process, Pool, freeze_support
 import requests
 from html_parser.mafengwo_parser import CityParser
-from tools.proxy_pool import ProxyPool
+from tools.proxy_pool import ProxyPool, ProxyManager
+
 
 # BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 当前程序上上一级目录
 # sys.path.append(BASE_DIR)  # 添加环境变量
 
 
 def crawler(url, proxy_pool_=None, headers=None):
-    proxy = None
+    proxy_ = None
     if proxy_pool_ is not None:
-        proxy = proxy_pool_.get_proxy()
+        proxy_ = proxy_pool_.get_proxy()
+        # print(proxy)
     try:
         response = requests.get(
             url,
             headers=headers,
-            proxies=proxy,
-            timeout=10)
+            proxies=proxy_,
+            timeout=3)
         response.encoding = response.apparent_encoding
         response.raise_for_status()
         return response
     except Exception as e:
         print(e)
+        # if proxy is not None:
+        #     print(proxy)
         proxy_pool_.drop_current_ip()
         return crawler(url, proxy_pool_, headers)
 
 
-def city_crawler(city_, open_proxy_=0):
+def city_crawler(city_, proxy_manager_=None):
     city_id = ""
     city_name = ""
     for index_ in city_.keys():
@@ -47,10 +52,7 @@ def city_crawler(city_, open_proxy_=0):
         "Content-Type": "text/html; charset=utf-8",
     }
     # try:
-    proxy_pool_ = None
-    if open_proxy_ > 0:
-        proxy_pool_ = ProxyPool(open_proxy_)
-    response = crawler(url, proxy_pool_, headers)
+    response = crawler(url, proxy_manager_, headers)
     city_parser = CityParser()
     result = city_parser.parser(response.text)
     for index_ in result:
@@ -59,18 +61,6 @@ def city_crawler(city_, open_proxy_=0):
                 index_['city'] = city_name
                 break
     return result
-    # except requests.exceptions.HTTPError as e:
-    #     print(e)
-    #     proxy_pool.drop_current_ip()
-    #     city_crawler(city_, proxy_pool_)
-    # except requests.exceptions.ReadTimeout as e:
-    #     print(e)
-    #     proxy_pool.drop_current_ip()
-    #     city_crawler(city_, proxy_pool_)
-    # except Exception as e:
-    #     print(e)
-    #     proxy_pool.drop_current_ip()
-    #     city_crawler(city_, proxy_pool_)
 
 
 def callbacks(arg):
@@ -151,28 +141,51 @@ if __name__ == '__main__':
         {"娄底": r'17363'},
         {"湘西": r'13287'}
     ]
+    proxy_list = [
+        {
+            'port': '24695', 'ip': '117.67.41.133'}, {
+            'port': '24975', 'ip': '114.226.160.26'}, {
+                'port': '42297', 'ip': '59.62.165.249'}, {
+                    'port': '48623', 'ip': '58.253.13.231'}, {
+                        'port': '33679', 'ip': '115.151.7.125'}, {
+                            'port': '28240', 'ip': '113.117.39.25'}, {
+                                'port': '26107', 'ip': '119.140.183.189'}, {
+                                    'port': '14275', 'ip': '36.57.87.3'}, {
+                                        'port': '15159', 'ip': '114.104.139.90'}, {
+                                            'port': '47675', 'ip': '218.64.152.136'}, {
+                                                'port': '46582', 'ip': '125.89.22.141'}, {
+                                                    'port': '46635', 'ip': '223.214.171.254'}]
+
     """
-        """
-    for index in city_list:
-        # proxy_pool = ProxyPool(1)
-        print(city_crawler(index, 1))
+    """
+    # proxy_manager = ProxyManager(proxy_list)
+    # for index in city_list:
+    #     # proxy_pool = ProxyPool(1)
+    #     print(city_crawler(index, proxy_manager))
 
     """ 获取top5和热门景点
-
-    pool = Pool(processes=14)
-    for city in city_list:
+        """
+    # proxy = ProxyPool(70)
+    pool = Pool(processes=2)
+    for index in range(0, 2):
+        city = city_list[index]
+        # for city in city_list:
         # proxy_pool = ProxyPool(1)
         # proxy_pool = None
-        open_proxy = 1
+        list_ = []
+        for i in range(0, 6):
+            list_.append(proxy_list.pop())
+        # print(list_)
+        proxy_manager = ProxyManager(list_)
         pool.apply_async(
             func=city_crawler,
             args=(
                 city,
-                open_proxy),
+                proxy_manager),
             callback=callbacks)
     pool.close()
     pool.join()
-        """
+
     """
     sAct: KMdd_StructWebAjax|GetPoisByTag
 iMddid: 10466
@@ -181,10 +194,6 @@ iPage: 1
 _ts: 1583850982764
 _sn: e4ae66965c
 
-
-_ts: 1583856197164
-_sn: d9b5b2a2d4
-
 sAct: KMdd_StructWebAjax|GetPoisByTag
 iMddid: 10466
 iTagId: 0
@@ -192,10 +201,4 @@ iPage: 1
 _ts: 1583856069548
 _sn: 21454efe08
 
-sAct: KMdd_StructWebAjax|GetPoisByTag
-iMddid: 10267
-iTagId: 0
-iPage: 1
-_ts: 1583852948325
-_sn: 2253754add
     """

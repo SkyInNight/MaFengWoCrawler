@@ -23,6 +23,36 @@ def is_open(ip_, port_):
         return False
 
 
+class ProxyManager(object):
+    def __init__(self, proxy_list):
+        self.__ip_queue = queue.Queue(len(proxy_list))
+        for proxy in proxy_list:
+            self.__ip_queue.put(proxy)
+        self.__current_ip = None
+
+    @property
+    def ip_queue(self):
+        return self.__ip_queue
+
+    def get_proxy(self):
+        if self.__current_ip is not None:
+            self.__ip_queue.put(self.__current_ip)
+            self.__current_ip = None
+        if self.__ip_queue.empty():
+            return "wait"
+        ip_ = self.__ip_queue.get()
+        self.__current_ip = ip_
+        # if is_open(ip_['ip'], ip_['port']):
+        proxy = {'http': ip_['ip'] + ":" + ip_['port']}
+        return proxy
+        # else:
+        #     return self.get_proxy()
+
+    def drop_current_ip(self):
+        print("已经将{0}扔掉".format(self.__current_ip))
+        self.__current_ip = None
+
+
 class ProxyPool(object):
 
     def __init__(self, max_size=50):
@@ -31,16 +61,20 @@ class ProxyPool(object):
         if max_size < 1 or max_size > 200:
             max_size = 50
         self.__max_size = max_size
-        self.__ip_queue = queue.Queue(max_size)
-        self.__current_ip = None
+        self.__ip_list = []
 
-    @property
-    def ip_queue(self):
-        if self.__ip_queue.empty():
+    def get_ip_list(self, num):
+        if len(self.__ip_list) < 1:
             result = self.allocate_proxy(self.__max_size)
             if result == "wait":
                 return None
-        return self.__ip_queue
+        if num > len(self.__ip_list) or num < 1:
+            num = len(self.__ip_list)
+        return_list = []
+        for i in range(0, num):
+            ip_ = self.__ip_list.pop()
+            return_list.append(ip_)
+        return return_list
 
     def allocate_proxy(self, num_):
         url_list = json.loads(self.__cf.get('proxy', 'url'))
@@ -62,28 +96,6 @@ class ProxyPool(object):
                 return "wait"
             return "success"
 
-    def get_proxy(self):
-        if self.__current_ip is not None:
-            self.__ip_queue.put(self.__current_ip)
-            self.__current_ip = None
-        if self.__ip_queue.empty():
-            status = self.allocate_proxy(self.__max_size)
-            if status == "wait":
-                print("ip地址获取出错，请保存数据退出")
-                return "error"
-            elif status == "success":
-                print("获取ip地址成功")
-        ip_ = self.__ip_queue.get()
-        if is_open(ip_['ip'], ip_['port']):
-            proxy = {'http': ip_['ip'] + ":" + ip_['port']}
-            self.__current_ip = ip_
-            return proxy
-        else:
-            return self.get_proxy()
-
-    def drop_current_ip(self):
-        self.__current_ip = None
-
     def request_ip(self, url, num, error_num=0):
         # 为了防止获取上一次的ip地址，这里强制在获取地址前先休眠1秒钟
         time.sleep(1)
@@ -100,7 +112,7 @@ class ProxyPool(object):
                 return "wait"
             ip_list = data['obj']
             for ip_ in ip_list:
-                self.__ip_queue.put(ip_)
+                self.__ip_list.append(ip_)
             return "success"
         except Exception as e:
             print(e)
@@ -113,9 +125,15 @@ class ProxyPool(object):
 
 if __name__ == '__main__':
     # print(cf.get('proxy', 'url'))
-    ip_pool = ProxyPool(10)
-    for i in range(0, 100):
-        print(ip_pool.get_proxy())
+    ip_pool = ProxyPool(12)
+    ip_list = ip_pool.get_ip_list(12)
+    print(ip_list)
+    # proxy_manager = ProxyManager(ip_list)
+    # for i in range(0, 100):
+    #     print(proxy_manager.get_proxy())
+    # print(json.dumps(ip_pool.ip_queue))
+    # for i in range(0, 100):
+    #     print(ip_pool.get_proxy())
     # ip = '117.81.190.56'
     # port = '40659'
     # print(is_open(ip, port))
