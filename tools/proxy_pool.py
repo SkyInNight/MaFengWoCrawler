@@ -30,6 +30,9 @@ class ProxyManager(object):
             self.__ip_queue.put(proxy)
         self.__current_ip = None
 
+    def is_empty(self):
+        return self.__ip_queue.empty()
+
     @property
     def ip_queue(self):
         return self.__ip_queue
@@ -57,7 +60,7 @@ class ProxyPool(object):
 
     def __init__(self, max_size=50):
         self.__cf = configparser.ConfigParser()
-        self.__cf.read("..\\config\\config.conf")
+        self.__cf.read("config\\config.conf")
         if max_size < 1 or max_size > 200:
             max_size = 50
         self.__max_size = max_size
@@ -83,7 +86,7 @@ class ProxyPool(object):
         # 单个api最多允许一次请求50条如果平均分摊超过最大上限，则自动降低要求。
         if num_ > len(url_list) * 50:
             num_ = len(url_list) * 30
-        if num_ / len(url_list) == 0:
+        if num_ / len(url_list) < 3:
             return self.request_ip(url_list[0], num_)
         else:
             half = int(num_ / len(url_list))
@@ -125,8 +128,8 @@ class ProxyPool(object):
 
 if __name__ == '__main__':
     # print(cf.get('proxy', 'url'))
-    ip_pool = ProxyPool(12)
-    ip_list = ip_pool.get_ip_list(12)
+    ip_pool = ProxyPool(6)
+    ip_list = ip_pool.get_ip_list(6)
     print(ip_list)
     # proxy_manager = ProxyManager(ip_list)
     # for i in range(0, 100):
