@@ -8,6 +8,7 @@ from fake_useragent import UserAgent
 from multiprocessing import Process, Pool, freeze_support
 import requests
 from html_parser.mafengwo_parser import TopFiveCityParser, AllScenicParser
+from tools import scenic_tools
 from tools.proxy_pool import ProxyPool, ProxyManager
 from tools.read_js import read_js
 
@@ -109,7 +110,7 @@ def callbacks(arg):
         for index_ in range(len(arg)):
             """
             if index_ == len(arg) - 1:
-                current_url_list = arg[index_]['current_url_list']
+            current_url_list = arg[index_]['current_url_list']
                 break
             """
             scenic_info_list.append(arg[index_])
@@ -118,7 +119,7 @@ def callbacks(arg):
     #     output.write(json.dumps(current_url_list))
 
 
-def all_scenic_crawler(city_, parser_ ,open_proxy=False, default_proxy=2):
+def all_scenic_crawler(city_, parser_, open_proxy=False, default_proxy=2):
     city_id = ""
     city_name = ""
     for index_ in city_.keys():
@@ -174,6 +175,9 @@ def scenic_callback(arg):
         output.write(json.dumps(arg) + "\n")
 
 
+def scenic_info_crawler(scenic_url):
+    return scenic_tools.get_scenic_info(scenic_url)
+
 if __name__ == '__main__':
     # common : http://www.mafengwo.cn/jd/id/gonglve.html
     city_list = [
@@ -193,6 +197,8 @@ if __name__ == '__main__':
         {"湘西": r'13287'}
     ]
     city_parser = AllScenicParser()
+    url = r'http://www.mafengwo.cn/poi/321.html'
+    print(scenic_info_crawler(url))
     # proxy_list = []
     """
     # proxy_manager = ProxyManager(proxy_list)
@@ -200,14 +206,14 @@ if __name__ == '__main__':
         # proxy_pool = ProxyPool(1)
         print(top_five_city_crawler(index, city_parser))
     """
-    # """ 多进程获取，获取top5和热门景点
+    """ 多进程获取，获取top5和热门景点
     # proxy = ProxyPool(70)
     pool = Pool(processes=14)
     for city in city_list:
         pool.apply_async(
             func=all_scenic_crawler,
-            args=(city,city_parser),
+            args=(city, city_parser),
             callback=scenic_callback)
     pool.close()
     pool.join()
-    # """
+    """
