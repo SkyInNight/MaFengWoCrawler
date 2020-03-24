@@ -17,7 +17,7 @@ from tools.read_js import read_js
 # sys.path.append(BASE_DIR)  # 添加环境变量
 
 
-def crawler(url, proxy_pool_=None, headers=None):
+def crawler(url, proxy_pool_=None, headers=None, data=None):
     proxy_ = None
     if proxy_pool_ is not None:
         if proxy_pool_.is_empty():
@@ -29,6 +29,7 @@ def crawler(url, proxy_pool_=None, headers=None):
             url,
             headers=headers,
             proxies=proxy_,
+            params=data,
             timeout=3)
         response.encoding = response.apparent_encoding
         response.raise_for_status()
@@ -174,9 +175,30 @@ def scenic_callback(arg):
     with open('../data/all/' + city_name + '.json', 'a+', encoding='utf-8') as output:
         output.write(json.dumps(arg) + "\n")
 
+def senic_location_cralwer(scenic_id):
+    # 获取景点的地理位置。
+    url_location = r'http://pagelet.mafengwo.cn/poi/pagelet/poiLocationApi'
+    ua = UserAgent()
+    headers = {
+        'Host': 'pagelet.mafengwo.cn',
+        'Referer': 'http://www.mafengwo.cn/poi/' + scenic_id + '.html',
+        "Connection": "keep-alive",
+        'User-Agent': ua.random,
+        "Accept": "*/*",
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'
+    }
+    data = read_js({'_ts': str(int(time.time() * 1000)), 'params': '{"poi_id":"' + scenic_id + '"}'})
+    response = crawler(url_location, headers=headers, data=data)
+    result = json.loads(response.text)['data']['controller_data']['poi']
+    location = {'北纬': result['lat'], '东经': result['lng']}
+    return location
 
-def scenic_info_crawler(scenic_url):
-    return scenic_tools.get_scenic_info(scenic_url)
+def scenic_info_crawler(scenic):
+    scenic_id = scenic_tools.get_scenic_info(scenic['href'])
+    scenic['location'] = senic_location_cralwer(scenic_id)
+
+    return scenic
+
 
 if __name__ == '__main__':
     # common : http://www.mafengwo.cn/jd/id/gonglve.html
@@ -198,7 +220,7 @@ if __name__ == '__main__':
     ]
     city_parser = AllScenicParser()
     url = r'http://www.mafengwo.cn/poi/321.html'
-    print(scenic_info_crawler(url))
+    print(senic_location_cralwer('321'))
     # proxy_list = []
     """
     # proxy_manager = ProxyManager(proxy_list)
