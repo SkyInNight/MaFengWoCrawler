@@ -4,7 +4,24 @@ from bs4 import BeautifulSoup
 import re
 
 
-class CityParser(HtmlParserInterface):
+class AllScenicParser(HtmlParserInterface):
+    def parser(self, context):
+        current_url_list = []
+        scenic_list = []
+        soup = BeautifulSoup(context, 'lxml')
+        a_list = soup.select('li > a')
+        for a in a_list:
+            scenic = {'href': r'http://www.mafengwo.cn' + a['href'],
+                      'title': a['title'],
+                      'type': 'common_scenic'
+                      }
+            scenic_list.append(scenic)
+            current_url_list.append(r'http://www.mafengwo.cn' + a['href'])
+        scenic_list.append({'current_url_list': current_url_list})
+        return scenic_list
+
+
+class TopFiveCityParser(HtmlParserInterface):
 
     def parser(self, context):
         """ 解析马蜂窝城市景点首页
@@ -31,21 +48,6 @@ class CityParser(HtmlParserInterface):
             scenic = {'href': r'http://www.mafengwo.cn' + a['href'],
                       'title': a['title'],
                       'type': 'top_' + str(div.find('span', {"class": "num"}).contents[0])}
-            """
-            # 1.6 如果当前景点有内部景点，则遍历循环当前景点的内部景点
-            link_list = div.select('div.links > a')
-            if link_list is not None:
-                inside_scenic_list = []
-                for link in link_list:
-                    inside_scenic = {'href': r'http://www.mafengwo.cn' + \
-                                             link['href'],
-                                     'title': link.get_text()
-                                     }
-                    current_url_list.append(
-                        r'http://www.mafengwo.cn' + link['href'])
-                    inside_scenic_list.append(inside_scenic)
-                scenic['inside_scenic_list'] = inside_scenic_list
-                """
             scenic_list.append(scenic)
         # 2 获取当前页面的热门页面
         hot_list = soup.select(
