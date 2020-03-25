@@ -5,7 +5,7 @@ import time
 import requests
 from fake_useragent import UserAgent
 
-from html_parser.mafengwo_parser import AllScenicParser, SummaryParser
+from html_parser.mafengwo_parser import AllScenicParser, SummaryParser, PhotoParser
 from tools import scenic_tools
 from tools.proxy_pool import ProxyPool, ProxyManager
 from tools.read_js import read_js, parse_js
@@ -201,19 +201,37 @@ def scenic_summary_crawler(scenic_url):
         'Host': 'www.mafengwo.cn',
         'Referer': 'http://www.mafengwo.cn/jd/10466/gonglve.html',
         'Upgrade-Insecure-Requests': '1',
-        }
+    }
     session = requests.session()
-    response = session.get(url=scenic_url, headers=headers)
+    response = session.get(scenic_url, headers=headers)
     # cookies = response.cookies
     # cookies = '; '.join(['='.join(item) for item in cookies.items()])
     if response.status_code == 521:
         cookie = parse_js(response.text)
         session.cookies['__jsl_clearance'] = cookie.split('=')[1]
         # print(session.cookies)
-        response = session.get(url, headers=headers)
+        response = session.get(scenic_url, headers=headers)
         # print(response.status_code)
         summary_parser = SummaryParser()
         return summary_parser.parser(response.text)
+
+
+def scenic_img_crawler(scenic_id):
+    url = r'http://www.mafengwo.cn/mdd/ajax_photolist.php'
+    data = {
+        'act': 'getPoiPhotoList',
+        'poiid': scenic_id,
+        'page': '1'
+    }
+    ua = UserAgent()
+    headers = {
+        'Host': 'www.mafengwo.cn',
+        'Referer': r'http://www.mafengwo.cn/photo/poi/' + scenic_id + '.html',
+        'User-Agent': ua.random
+    }
+    response = requests.get(url, headers=headers, params=data)
+    photo_parser = PhotoParser()
+    return photo_parser.parser(response.text)
 
 
 def scenic_info_crawler(scenic):
@@ -242,7 +260,7 @@ if __name__ == '__main__':
     ]
     city_parser = AllScenicParser()
     url = r'http://www.mafengwo.cn/poi/321.html?type=3'
-    print(scenic_summary_crawler(url))
+    print(scenic_img_crawler('321'))
     # proxy_list = []
     """
     # proxy_manager = ProxyManager(proxy_list)

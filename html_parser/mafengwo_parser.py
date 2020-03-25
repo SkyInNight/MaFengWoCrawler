@@ -4,6 +4,15 @@ from bs4 import BeautifulSoup
 import re
 
 
+class PhotoParser(HtmlParserInterface):
+    def parser(self, context):
+        regex = re.compile(r'src="(.*?)" alt="" class="a-pic">', re.I)
+        photo_list = regex.findall(context)
+        for index in range(0, len(photo_list)):
+            photo_list[index] = photo_list[index].split('?')[0]
+        return photo_list
+
+
 class SummaryParser(HtmlParserInterface):
     def parser(self, context):
         regex = re.compile(r'<div class="summary">([\s\S]*?)</div>', re.I)
