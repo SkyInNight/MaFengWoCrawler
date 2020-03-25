@@ -10,7 +10,7 @@ import requests
 from html_parser.mafengwo_parser import TopFiveCityParser, AllScenicParser
 from tools import scenic_tools
 from tools.proxy_pool import ProxyPool, ProxyManager
-from tools.read_js import read_js
+from tools.read_js import read_js,parse_js
 
 
 # BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 当前程序上上一级目录
@@ -175,7 +175,8 @@ def scenic_callback(arg):
     with open('../data/all/' + city_name + '.json', 'a+', encoding='utf-8') as output:
         output.write(json.dumps(arg) + "\n")
 
-def senic_location_cralwer(scenic_id):
+
+def scenic_location_crawler(scenic_id):
     # 获取景点的地理位置。
     url_location = r'http://pagelet.mafengwo.cn/poi/pagelet/poiLocationApi'
     ua = UserAgent()
@@ -193,10 +194,36 @@ def senic_location_cralwer(scenic_id):
     location = {'北纬': result['lat'], '东经': result['lng']}
     return location
 
+
+def scenic_summary_crawler(scenic_url):
+    ua = UserAgent()
+    headers = {
+        'User-Agent': ua.random,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        # 'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+        'Cache-Control': 'max-age=0',
+        'Connection': 'keep-alive',
+        'Host': 'www.mafengwo.cn',
+        'Referer': 'http://www.mafengwo.cn/jd/10466/gonglve.html',
+        'Upgrade-Insecure-Requests': '1',
+        }
+    session = requests.session()
+    # session.headers.update(headers)
+    response = session.get(url=scenic_url)
+    print(response.text)
+    # cookies = response.cookies
+    # cookies_text = ';'.join(['='.join(item) for item in cookies.items()])
+    if response.status_code == 521:
+        headers['cookie'] = parse_js(response.text)
+        response = session.get(url, headers=headers)
+        print(response.status_code)
+    # return response.status_code
+
+
 def scenic_info_crawler(scenic):
     scenic_id = scenic_tools.get_scenic_info(scenic['href'])
-    scenic['location'] = senic_location_cralwer(scenic_id)
-
+    scenic['location'] = scenic_location_crawler(scenic_id)
     return scenic
 
 
@@ -219,8 +246,8 @@ if __name__ == '__main__':
         {"湘西": r'13287'}
     ]
     city_parser = AllScenicParser()
-    url = r'http://www.mafengwo.cn/poi/321.html'
-    print(senic_location_cralwer('321'))
+    url = r'http://www.mafengwo.cn/poi/321.html?type=3'
+    print(scenic_summary_crawler(url))
     # proxy_list = []
     """
     # proxy_manager = ProxyManager(proxy_list)
