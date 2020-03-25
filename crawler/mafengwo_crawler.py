@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import json
 import time
+from multiprocessing.pool import Pool
 
 import requests
 from fake_useragent import UserAgent
 
-from html_parser.mafengwo_parser import AllScenicParser, SummaryParser, PhotoParser, InsiderScenicParser
+from html_parser.mafengwo_parser import AllScenicParser, ScenicInfoParser
 from tools import scenic_tools
 from tools.proxy_pool import ProxyPool, ProxyManager
 from tools.read_js import read_js, parse_js
@@ -171,6 +172,11 @@ def scenic_callback(arg):
         output.write(json.dumps(arg) + "\n")
 
 
+def scenic_info_callback(arg):
+    with open('../data/all_scenic_info/' + arg['city'] + '.json', 'a+', encoding='utf-8') as output:
+        output.write(json.dumps(arg['scenic_info_list']) + "\n")
+
+
 def scenic_location_crawler(scenic_id):
     # 获取景点的地理位置。
     url_location = r'http://pagelet.mafengwo.cn/poi/pagelet/poiLocationApi'
@@ -190,7 +196,7 @@ def scenic_location_crawler(scenic_id):
     return location
 
 
-def scenic_summary_crawler(scenic_url):
+def scenic_summary_crawler(scenic_url, scenic_info_parser):
     while True:
         ua = UserAgent()
         headers = {
@@ -215,11 +221,10 @@ def scenic_summary_crawler(scenic_url):
             # print(session.cookies)
             response = session.get(scenic_url, headers=headers)
             # print(response.status_code)
-            summary_parser = SummaryParser()
-            return summary_parser.parser(response.text)
+            return scenic_info_parser.summary_parser(response.text)
 
 
-def scenic_img_crawler(scenic_id):
+def scenic_img_crawler(scenic_id, scenic_info_parser):
     url = r'http://www.mafengwo.cn/mdd/ajax_photolist.php'
     data = {
         'act': 'getPoiPhotoList',
@@ -233,21 +238,26 @@ def scenic_img_crawler(scenic_id):
         'User-Agent': ua.random
     }
     response = requests.get(url, headers=headers, params=data)
-    photo_parser = PhotoParser()
-    return photo_parser.parser(response.text)
+    return scenic_info_parser.photo_parser(response.text)
 
 
-def scenic_info_crawler(scenic):
+def scenic_info_crawler(scenic, scenic_info_parser,time=0):
     print('正在获取景点：{0}的信息'.format(scenic['title']))
     scenic_id = scenic_tools.get_scenic_info(scenic['href'])
-    scenic['location'] = scenic_location_crawler(scenic_id)
-    scenic['summary'] = scenic_summary_crawler(scenic['href'])
-    scenic['photos'] = scenic_img_crawler(scenic_id)
-    scenic['inside_scenic'] = inside_scenic_crawler(scenic_id)
-    return scenic
+    try:
+        scenic['location'] = scenic_location_crawler(scenic_id)
+        scenic['summary'] = scenic_summary_crawler(scenic['href'], scenic_info_parser)
+        scenic['photos'] = scenic_img_crawler(scenic_id, scenic_info_parser)
+        scenic['inside_scenic'] = inside_scenic_crawler(scenic_id, scenic_info_parser)
+        return scenic
+    except Exception as e:
+        print(e)
+        if time > 30:
+            return scenic
+        scenic_info_crawler(scenic, scenic_info_parser,time + 1)
 
 
-def inside_scenic_crawler(scenic_id):
+def inside_scenic_crawler(scenic_id, scenic_info_parser):
     url = r'http://pagelet.mafengwo.cn/poi/pagelet/poiSubPoiApi'
     ua = UserAgent()
     headers = {
@@ -265,20 +275,19 @@ def inside_scenic_crawler(scenic_id):
         html = json.loads(response.text)['data']['html']
         if html == "":
             break
-        insider_scenic_parser = InsiderScenicParser()
-        scenic_list = insider_scenic_parser.parser(html)
+        scenic_list = scenic_info_parser.inside_scenic_parser(html)
         for scenic in scenic_list:
             insider_scenic_list.append(scenic)
     return insider_scenic_list
 
 
-def city_scenic_crawler(city):
-    city_ = scenic_tools.get_city_info(city)
+def city_scenic_crawler(city_, scenic_info_parser):
+    city_ = scenic_tools.get_city_info(city_)
     scenic_list = scenic_tools.get_scenic_url(city_['city_name'])
     scenic_info_list = scenic_list['scenic_list']
     for index_ in range(0, len(scenic_info_list)):
-        scenic_info_list[index_] = scenic_info_crawler(scenic_info_list[index_])
-    return scenic_info_list
+        scenic_info_list[index_] = scenic_info_crawler(scenic_info_list[index_], scenic_info_parser)
+    return {'scenic_info_list': scenic_info_list, 'city': city_['city_name']}
 
 
 if __name__ == '__main__':
@@ -299,7 +308,7 @@ if __name__ == '__main__':
         {"娄底": r'17363'},
         {"湘西": r'13287'}
     ]
-    city_parser = AllScenicParser()
+    city_parser = ScenicInfoParser()
     """
     url = r'http://www.mafengwo.cn/poi/321.html?type=3'
     print(json.dumps(city_scenic_crawler(city_list[0])))
@@ -312,14 +321,15 @@ if __name__ == '__main__':
         # proxy_pool = ProxyPool(1)
         print(top_five_city_crawler(index, city_parser))
     """
-    """ 多进程获取，获取top5和热门景点
-    # proxy = ProxyPool(70)
+    # """ 多进程获取，获取top5和热门景点
+    proxy = ProxyPool(70)
     pool = Pool(processes=14)
     for city in city_list:
+        # scenic_info_callback(city_scenic_crawler(city, city_parser))
         pool.apply_async(
-            func=all_scenic_crawler,
-            args=(city, city_parser),
-            callback=scenic_callback)
+            func=city_scenic_crawler,
+            args=(city,city_parser),
+            callback=scenic_info_callback)
     pool.close()
     pool.join()
-    """
+    # """

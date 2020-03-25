@@ -4,8 +4,8 @@ from bs4 import BeautifulSoup
 import re
 
 
-class InsiderScenicParser(HtmlParserInterface):
-    def parser(self, context):
+class ScenicInfoParser(HtmlParserInterface):
+    def inside_scenic_parser(self, context):
         insider_scenic_list = []
         regex = re.compile(r'<a href="(.*?)" target="_blank" title="(.*?)">', re.I)
         scenic_list = regex.findall(context)
@@ -13,18 +13,14 @@ class InsiderScenicParser(HtmlParserInterface):
             insider_scenic_list.append({'href': r'http://www.mafengwo.cn' + scenic[0], 'title': scenic[1]})
         return insider_scenic_list
 
-
-class PhotoParser(HtmlParserInterface):
-    def parser(self, context):
+    def photo_parser(self, context):
         regex = re.compile(r'src="(.*?)" alt="" class="a-pic">', re.I)
         photo_list = regex.findall(context)
         for index in range(0, len(photo_list)):
             photo_list[index] = photo_list[index].split('?')[0]
         return photo_list
 
-
-class SummaryParser(HtmlParserInterface):
-    def parser(self, context):
+    def summary_parser(self, context):
         regex = re.compile(r'<div class="summary">([\s\S]*?)</div>', re.I)
         summary = regex.findall(context)
         if len(summary) == 0:
