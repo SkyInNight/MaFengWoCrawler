@@ -22,7 +22,10 @@ def parse_js(html_):
                                                                                                          "")
     content = execjs.compile(func_return)
     evaled_func = content.call('f')
-    function_name = re.search('var (.*?)=function', evaled_func).group(1)
+    try:
+        function_name = re.search('var (.*?)=function', evaled_func).group(1)
+    except Exception as e:
+        return None
     mode_func = evaled_func. \
         replace('return return', 'return eval'). \
         replace('while(window._phantom||window.__phantomas){};', ''). \

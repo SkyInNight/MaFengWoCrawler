@@ -191,29 +191,32 @@ def scenic_location_crawler(scenic_id):
 
 
 def scenic_summary_crawler(scenic_url):
-    ua = UserAgent()
-    headers = {
-        'User-Agent': ua.random,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
-        'Cache-Control': 'max-age=0',
-        'Connection': 'keep-alive',
-        'Host': 'www.mafengwo.cn',
-        'Referer': 'http://www.mafengwo.cn/jd/10466/gonglve.html',
-        'Upgrade-Insecure-Requests': '1',
-    }
-    session = requests.session()
-    response = session.get(scenic_url, headers=headers)
-    # cookies = response.cookies
-    # cookies = '; '.join(['='.join(item) for item in cookies.items()])
-    if response.status_code == 521:
-        cookie = parse_js(response.text)
-        session.cookies['__jsl_clearance'] = cookie.split('=')[1]
-        # print(session.cookies)
+    while True:
+        ua = UserAgent()
+        headers = {
+            'User-Agent': ua.random,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+            'Cache-Control': 'max-age=0',
+            'Connection': 'keep-alive',
+            'Host': 'www.mafengwo.cn',
+            'Referer': 'http://www.mafengwo.cn/jd/10466/gonglve.html',
+            'Upgrade-Insecure-Requests': '1',
+        }
+        session = requests.session()
         response = session.get(scenic_url, headers=headers)
-        # print(response.status_code)
-        summary_parser = SummaryParser()
-        return summary_parser.parser(response.text)
+        # cookies = response.cookies
+        # cookies = '; '.join(['='.join(item) for item in cookies.items()])
+        if response.status_code == 521:
+            cookie = parse_js(response.text)
+            if cookie is None:
+                continue
+            session.cookies['__jsl_clearance'] = cookie.split('=')[1]
+            # print(session.cookies)
+            response = session.get(scenic_url, headers=headers)
+            # print(response.status_code)
+            summary_parser = SummaryParser()
+            return summary_parser.parser(response.text)
 
 
 def scenic_img_crawler(scenic_id):
@@ -235,6 +238,7 @@ def scenic_img_crawler(scenic_id):
 
 
 def scenic_info_crawler(scenic):
+    print('正在获取景点：{0}的信息'.format(scenic['title']))
     scenic_id = scenic_tools.get_scenic_info(scenic['href'])
     scenic['location'] = scenic_location_crawler(scenic_id)
     scenic['summary'] = scenic_summary_crawler(scenic['href'])
@@ -268,6 +272,15 @@ def inside_scenic_crawler(scenic_id):
     return insider_scenic_list
 
 
+def city_scenic_crawler(city):
+    city_ = scenic_tools.get_city_info(city)
+    scenic_list = scenic_tools.get_scenic_url(city_['city_name'])
+    scenic_info_list = scenic_list['scenic_list']
+    for index_ in range(0, len(scenic_info_list)):
+        scenic_info_list[index_] = scenic_info_crawler(scenic_info_list[index_])
+    return scenic_info_list
+
+
 if __name__ == '__main__':
     # common : http://www.mafengwo.cn/jd/id/gonglve.html
     city_list = [
@@ -287,8 +300,11 @@ if __name__ == '__main__':
         {"湘西": r'13287'}
     ]
     city_parser = AllScenicParser()
+    """
     url = r'http://www.mafengwo.cn/poi/321.html?type=3'
-    print(inside_scenic_crawler('321'))
+    print(json.dumps(city_scenic_crawler(city_list[0])))
+    """
+
     # proxy_list = []
     """
     # proxy_manager = ProxyManager(proxy_list)

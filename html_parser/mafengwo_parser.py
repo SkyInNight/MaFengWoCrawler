@@ -27,6 +27,8 @@ class SummaryParser(HtmlParserInterface):
     def parser(self, context):
         regex = re.compile(r'<div class="summary">([\s\S]*?)</div>', re.I)
         summary = regex.findall(context)
+        if len(summary) == 0:
+            return ""
         return summary[0].replace('<br />', "").replace(' ', "")
 
 

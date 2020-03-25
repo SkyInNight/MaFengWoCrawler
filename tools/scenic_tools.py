@@ -2,6 +2,15 @@
 import json
 
 
+def get_city_info(city_):
+    city_id = ""
+    city_name = ""
+    for index_ in city_.keys():
+        city_name = index_
+        city_id = city_[index_]
+    return {'city_id': city_id, 'city_name': city_name}
+
+
 def get_scenic_info(scenic_url):
     scenic_id = scenic_url.split('/')[len(scenic_url.split('/')) - 1].split('.')[0]
     return scenic_id
