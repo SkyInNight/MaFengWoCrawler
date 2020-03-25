@@ -5,7 +5,7 @@ import time
 import requests
 from fake_useragent import UserAgent
 
-from html_parser.mafengwo_parser import AllScenicParser, SummaryParser, PhotoParser
+from html_parser.mafengwo_parser import AllScenicParser, SummaryParser, PhotoParser, InsiderScenicParser
 from tools import scenic_tools
 from tools.proxy_pool import ProxyPool, ProxyManager
 from tools.read_js import read_js, parse_js
@@ -38,7 +38,7 @@ def crawler(url_, proxy_pool_=None, headers=None, data=None):
         #     print(proxy)
         if proxy_pool_ is not None:
             proxy_pool_.drop_current_ip()
-            return crawler(url_, proxy_pool_, headers)
+            return crawler(url_, proxy_pool_, headers, data)
         else:
             return None
 
@@ -237,7 +237,35 @@ def scenic_img_crawler(scenic_id):
 def scenic_info_crawler(scenic):
     scenic_id = scenic_tools.get_scenic_info(scenic['href'])
     scenic['location'] = scenic_location_crawler(scenic_id)
+    scenic['summary'] = scenic_summary_crawler(scenic['href'])
+    scenic['photos'] = scenic_img_crawler(scenic_id)
+    scenic['inside_scenic'] = inside_scenic_crawler(scenic_id)
     return scenic
+
+
+def inside_scenic_crawler(scenic_id):
+    url = r'http://pagelet.mafengwo.cn/poi/pagelet/poiSubPoiApi'
+    ua = UserAgent()
+    headers = {
+        'Host': 'pagelet.mafengwo.cn',
+        'Referer': r'http://www.mafengwo.cn/poi/' + scenic_id + '.html',
+        'User-Agent': ua.random
+    }
+    page_num = 1
+    insider_scenic_list = []
+    while True:
+        data = read_js({'_ts': str(int(time.time() * 1000)),
+                        'params': '{"poi_id":"' + scenic_id + '", "page":' + str(page_num) + '}'})
+        page_num += 1
+        response = crawler(url, headers=headers, data=data)
+        html = json.loads(response.text)['data']['html']
+        if html == "":
+            break
+        insider_scenic_parser = InsiderScenicParser()
+        scenic_list = insider_scenic_parser.parser(html)
+        for scenic in scenic_list:
+            insider_scenic_list.append(scenic)
+    return insider_scenic_list
 
 
 if __name__ == '__main__':
@@ -260,7 +288,7 @@ if __name__ == '__main__':
     ]
     city_parser = AllScenicParser()
     url = r'http://www.mafengwo.cn/poi/321.html?type=3'
-    print(scenic_img_crawler('321'))
+    print(inside_scenic_crawler('321'))
     # proxy_list = []
     """
     # proxy_manager = ProxyManager(proxy_list)

@@ -4,6 +4,16 @@ from bs4 import BeautifulSoup
 import re
 
 
+class InsiderScenicParser(HtmlParserInterface):
+    def parser(self, context):
+        insider_scenic_list = []
+        regex = re.compile(r'<a href="(.*?)" target="_blank" title="(.*?)">', re.I)
+        scenic_list = regex.findall(context)
+        for scenic in scenic_list:
+            insider_scenic_list.append({'href': r'http://www.mafengwo.cn' + scenic[0], 'title': scenic[1]})
+        return insider_scenic_list
+
+
 class PhotoParser(HtmlParserInterface):
     def parser(self, context):
         regex = re.compile(r'src="(.*?)" alt="" class="a-pic">', re.I)
