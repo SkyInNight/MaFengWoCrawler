@@ -4,6 +4,13 @@ from bs4 import BeautifulSoup
 import re
 
 
+class SummaryParser(HtmlParserInterface):
+    def parser(self, context):
+        regex = re.compile(r'<div class="summary">([\s\S]*?)</div>', re.I)
+        summary = regex.findall(context)
+        return summary[0].replace('<br />', "").replace(' ', "")
+
+
 class AllScenicParser(HtmlParserInterface):
     def parser(self, context):
         current_url_list = []

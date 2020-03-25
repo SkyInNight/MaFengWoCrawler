@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
-import queue
-import os
-import sys
 import json
 import time
-from fake_useragent import UserAgent
-from multiprocessing import Process, Pool, freeze_support
+
 import requests
-from html_parser.mafengwo_parser import TopFiveCityParser, AllScenicParser
+from fake_useragent import UserAgent
+
+from html_parser.mafengwo_parser import AllScenicParser, SummaryParser
 from tools import scenic_tools
 from tools.proxy_pool import ProxyPool, ProxyManager
-from tools.read_js import read_js,parse_js
+from tools.read_js import read_js, parse_js
 
 
 # BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 当前程序上上一级目录
 # sys.path.append(BASE_DIR)  # 添加环境变量
 
 
-def crawler(url, proxy_pool_=None, headers=None, data=None):
+def crawler(url_, proxy_pool_=None, headers=None, data=None):
     proxy_ = None
     if proxy_pool_ is not None:
         if proxy_pool_.is_empty():
@@ -26,7 +24,7 @@ def crawler(url, proxy_pool_=None, headers=None, data=None):
         # print(proxy)
     try:
         response = requests.get(
-            url,
+            url_,
             headers=headers,
             proxies=proxy_,
             params=data,
@@ -40,12 +38,12 @@ def crawler(url, proxy_pool_=None, headers=None, data=None):
         #     print(proxy)
         if proxy_pool_ is not None:
             proxy_pool_.drop_current_ip()
-            return crawler(url, proxy_pool_, headers)
+            return crawler(url_, proxy_pool_, headers)
         else:
             return None
 
 
-def post_crawler(url, proxy_pool_=None, headers=None, data=None):
+def post_crawler(url_, proxy_pool_=None, headers=None, data=None):
     proxy_ = None
     if proxy_pool_ is not None:
         if proxy_pool_.is_empty():
@@ -54,7 +52,7 @@ def post_crawler(url, proxy_pool_=None, headers=None, data=None):
         # print(proxy)
     try:
         response = requests.post(
-            url,
+            url_,
             headers=headers,
             proxies=proxy_,
             data=data,
@@ -66,7 +64,7 @@ def post_crawler(url, proxy_pool_=None, headers=None, data=None):
         print(e)
         if proxy_pool_ is not None:
             proxy_pool_.drop_current_ip()
-            return post_crawler(url, proxy_pool_, headers)
+            return post_crawler(url_, proxy_pool_, headers)
         else:
             return None
 
@@ -143,15 +141,12 @@ def all_scenic_crawler(city_, parser_, open_proxy=False, default_proxy=2):
             "Origin": "http://www.mafengwo.cn",
             "Connection": "keep-alive",
             "Referer": "http://www.mafengwo.cn/jd/" + city_id + "/gonglve.html",
-            # "Origin":url,
             'User-Agent': ua.random,
             "Accept": "application/json, text/javascript, */*; q=0.01",
             "Accept-Language": "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.6",
             "Content-Length": "101",
-            # "Accept-Encoding":"gzip, deflate, br",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             "X-Requested-With": "XMLHttpRequest",
-            # "Accept-Encoding": "gzip, deflate"
         }
         response = post_crawler(url, headers=headers, data=data)
         if response is None:
@@ -200,7 +195,6 @@ def scenic_summary_crawler(scenic_url):
     headers = {
         'User-Agent': ua.random,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-        # 'Accept-Encoding': 'gzip, deflate',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
         'Cache-Control': 'max-age=0',
         'Connection': 'keep-alive',
@@ -209,20 +203,17 @@ def scenic_summary_crawler(scenic_url):
         'Upgrade-Insecure-Requests': '1',
         }
     session = requests.session()
-    # session.headers.update(headers)
     response = session.get(url=scenic_url, headers=headers)
     # cookies = response.cookies
     # cookies = '; '.join(['='.join(item) for item in cookies.items()])
-    # print(session.cookies)
-    # print(cookies)
     if response.status_code == 521:
         cookie = parse_js(response.text)
         session.cookies['__jsl_clearance'] = cookie.split('=')[1]
-        print(session.cookies)
+        # print(session.cookies)
         response = session.get(url, headers=headers)
-        print(response.status_code)
-        return response.text
-    # return response.status_code
+        # print(response.status_code)
+        summary_parser = SummaryParser()
+        return summary_parser.parser(response.text)
 
 
 def scenic_info_crawler(scenic):

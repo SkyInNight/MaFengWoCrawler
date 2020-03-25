@@ -14,21 +14,23 @@ def read_js(data, ):
     return data
 
 
-def parse_js(html):
+def parse_js(html_):
     # 提取js加密函数
-    js_string = re.search('<script>(.*?)</script>', html).group(1)
+    js_string = re.search('<script>(.*?)</script>', html_).group(1)
     # 修改js数据，将eval改为return
-    func_return = js_string.replace('eval', 'return').replace('try{',"").replace(';break}',"").replace('catch(_){}',"")
+    func_return = js_string.replace('eval', 'return').replace('try{', "").replace(';break}', "").replace('catch(_){}',
+                                                                                                         "")
     content = execjs.compile(func_return)
     evaled_func = content.call('f')
-    function_name = re.search('var (.*?)=function',evaled_func).group(1)
+    function_name = re.search('var (.*?)=function', evaled_func).group(1)
     mode_func = evaled_func. \
         replace('return return', 'return eval'). \
         replace('while(window._phantom||window.__phantomas){};', ''). \
         replace('document.cookie=', 'return'). \
         replace(';if((function(){try{return !!window.addEventListener;}', ''). \
-        replace("catch(e){return false;}})()){document.addEventListener('DOMContentLoaded',"+function_name+",false)}", ''). \
-        replace("else{document.attachEvent('onreadystatechange',"+function_name+")}", '').replace(
+        replace(
+        "catch(e){return false;}})()){document.addEventListener('DOMContentLoaded'," + function_name + ",false)}", ''). \
+        replace("else{document.attachEvent('onreadystatechange'," + function_name + ")}", '').replace(
         r"setTimeout('location.href=location.pathname+location.search.replace(/[\?|&]captcha-challenge/,\'\')',1500);",
         '')
     mode_func = 'const jsdom = require("jsdom"); \n \
