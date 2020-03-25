@@ -210,14 +210,18 @@ def scenic_summary_crawler(scenic_url):
         }
     session = requests.session()
     # session.headers.update(headers)
-    response = session.get(url=scenic_url)
-    print(response.text)
+    response = session.get(url=scenic_url, headers=headers)
     # cookies = response.cookies
-    # cookies_text = ';'.join(['='.join(item) for item in cookies.items()])
+    # cookies = '; '.join(['='.join(item) for item in cookies.items()])
+    # print(session.cookies)
+    # print(cookies)
     if response.status_code == 521:
-        headers['cookie'] = parse_js(response.text)
+        cookie = parse_js(response.text)
+        session.cookies['__jsl_clearance'] = cookie.split('=')[1]
+        print(session.cookies)
         response = session.get(url, headers=headers)
         print(response.status_code)
+        return response.text
     # return response.status_code
 
 
