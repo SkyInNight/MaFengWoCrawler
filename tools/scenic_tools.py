@@ -9,18 +9,54 @@ def check_name_in_dir(name, dir_list):
     return False
 
 
+def combine_download_and_fault_scenic_info(city_name):
+    with open('../data/all_scenic_info/' + city_name + '.json', 'r', encoding='utf-8') as f:
+        scenic_list = json.loads(f.read())
+    with open('../data/fault_download/' + city_name + '_success.json', 'r', encoding='utf-8') as f:
+        fault_list = json.loads(f.read())
+    all_scenic_info = []
+    for scenic in scenic_list:
+        if scenic is not None:
+            all_scenic_info.append(scenic)
+    for fault in fault_list:
+        if fault is None:
+            continue
+        if not check_name_in_dir(fault['title'], all_scenic_info):
+            all_scenic_info.append(fault)
+        else:
+            for index_ in range(0, len(all_scenic_info)):
+                if all_scenic_info[index_]['title'] == fault['title']:
+                    all_scenic_info[index_] = fault
+    with open('../data/all_scenic_info/' + city_name + '_backup.json', 'w', encoding='utf-8') as f:
+        f.write(json.dumps(scenic_list))
+    with open('../data/all_scenic_info/' + city_name + '.json', 'w', encoding='utf-8') as f:
+        f.write(json.dumps(all_scenic_info))
+
+
+def check_fault_download(city_name):
+    print('正在检测{0}'.format(city_name))
+    with open('../data/fault_download/' + city_name + '.json', 'r', encoding='utf-8') as f:
+        scenic_list = json.loads(f.read())
+    with open('../data/fault_download/' + city_name + '_success.json', 'r', encoding='utf-8') as f:
+        fault_list = json.loads(f.read())
+    for scenic in scenic_list:
+        if not check_name_in_dir(scenic['title'], fault_list):
+            print('景点{0}下载失败'.format(scenic['title']))
+
+
 def check_download(city_name):
     list = get_scenic_url(city_name)
     scenic_list = list['scenic_list']
-    with open('../data/all_scenic_info/'+city_name+'.json', 'r', encoding='utf-8') as f:
+    with open('../data/all_scenic_info/' + city_name + '.json', 'r', encoding='utf-8') as f:
         download_data = f.read()
     download_list = json.loads(download_data)
+    print('城市{0}下载的景点个数{1}'.format(city_name, len(download_list)))
     fault_list = []
     for scenic in scenic_list:
         if not check_name_in_dir(scenic['title'], download_list):
             fault_list.append(scenic)
     print('城市{0},下载失败景点个数{1}，全部景点个数{2}'.format(city_name, len(fault_list), len(scenic_list)))
-    with open('../data/fault_download/'+city_name+'.json', 'a+', encoding='utf-8') as f:
+    with open('../data/fault_download/' + city_name + '.json', 'w', encoding='utf-8') as f:
         f.write(json.dumps(fault_list))
 
 
