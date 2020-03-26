@@ -2,6 +2,27 @@
 import json
 
 
+def check_name_in_dir(name, dir_list):
+    for scenic in dir_list:
+        if scenic is not None and scenic['title'] == name:
+            return True
+    return False
+
+
+def check_download(city_name):
+    list = get_scenic_url('怀化')
+    scenic_list = list['scenic_list']
+    with open('../data/all_scenic_info/怀化.json', 'r', encoding='utf-8') as f:
+        download_data = f.read()
+    download_list = json.loads(download_data)
+    fault_list = []
+    for scenic in scenic_list:
+        if not check_name_in_dir(scenic['title'], download_list):
+            fault_list.append(scenic)
+    with open('../data/fault_download/'+city_name+'.json', 'a+', encoding='utf-8') as f:
+        f.write(json.dumps(fault_list))
+
+
 def get_city_info(city_):
     city_id = ""
     city_name = ""
@@ -57,4 +78,25 @@ def get_scenic_url(city_name):
 
 
 if __name__ == '__main__':
-    print(get_scenic_url('长沙'))
+    # print(get_scenic_url('长沙'))
+    city_list = [
+        {"长沙": r'10466'},
+        {"株洲": r'21916'},
+        {"湘潭": r"34888"},
+        {"衡阳": r'10398'},
+        {"邵阳": r'15540'},
+        {"岳阳": r'14104'},
+        {"常德": r'17070'},
+        {"张家界": r'10267'},
+        {"益阳": r'15393'},
+        {"郴州": r'10792'},
+        {"永州": r'22460'},
+        {"怀化": r'23078'},
+        {"娄底": r'17363'},
+        {"湘西": r'13287'}
+    ]
+    for city in city_list:
+        for key in city.keys():
+            city_name = key
+        # print(city_name)
+        check_download(city_name)
