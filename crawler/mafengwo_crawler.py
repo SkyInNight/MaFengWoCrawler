@@ -296,8 +296,14 @@ def fault_scenic_download(city_name, scenic_info_parser):
         scenic_list = json.loads(f.read())
     for index_ in range(0, len(scenic_list)):
         scenic_list[index_] = scenic_info_crawler(scenic_list[index_], scenic_info_parser)
-    with open('../data/fault_download/' + city_name + '.json', 'w', encoding='utf-8') as f:
-        f.write(json.dumps(scenic_list))
+    output = {'city_name': city_name, 'scenic_list': scenic_list}
+    return output
+
+
+def fault_download_callback(arg):
+    city_ = arg['city_name']
+    with open('../data/fault_download/' + city_ + '_success.json', 'w', encoding='utf-8') as f:
+        f.write(json.dumps(arg['scenic_list']))
 
 
 if __name__ == '__main__':
@@ -319,10 +325,10 @@ if __name__ == '__main__':
         {"湘西": r'13287'}
     ]
     city_parser = ScenicInfoParser()
-    for city in city_list:
-        for key in city.keys():
-            city_name = key
-        fault_scenic_download(city_name, city_parser)
+    # for city in city_list:
+    #     for key in city.keys():
+    #         city_name = key
+    #     fault_scenic_download(city_name, city_parser)
     """
     url = r'http://www.mafengwo.cn/poi/321.html?type=3'
     print(json.dumps(city_scenic_crawler(city_list[0])))
@@ -335,15 +341,17 @@ if __name__ == '__main__':
         # proxy_pool = ProxyPool(1)
         print(top_five_city_crawler(index, city_parser))
     """
-    """ 多进程获取，获取top5和热门景点
+    # """ 多进程获取，获取top5和热门景点
     # proxy = ProxyPool(70)
     pool = Pool(processes=14)
     for city in city_list:
+        for key in city.keys():
+            city_name = key
         # scenic_info_callback(city_scenic_crawler(city, city_parser))
         pool.apply_async(
-            func=city_scenic_crawler,
-            args=(city,city_parser),
-            callback=scenic_info_callback)
+            func=fault_scenic_download,
+            args=(city_name,city_parser),
+            callback=fault_download_callback)
     pool.close()
     pool.join()
-    """
+    # """
