@@ -7,7 +7,7 @@ def check_inside_scenic(scenic, dir_list):
         inside_scenic_list = index_['inside_scenic']
         for inside_scenic in inside_scenic_list:
             if scenic['title'] == inside_scenic['title']:
-                print('景点{0},为景点{1}的内部景点'.format(inside_scenic['title'],index_['title']))
+                print('景点{0},为景点{1}的内部景点'.format(inside_scenic['title'], index_['title']))
                 scenic['type'] = index_['title']
     return scenic
 
@@ -38,10 +38,15 @@ if __name__ == '__main__':
         {"娄底": r'17363'},
         {"湘西": r'13287'}
     ]
+    all_info = []
     for city in city_list:
         for key in city.keys():
             city_name = key
         # set_inside_scenic(city_name)
         with open('../data/scenic_info/' + city_name + '.json', 'r', encoding='utf-8') as f:
             scenic_info = json.loads(f.read())
-        print('城市{0}的景点个数为{1}'.format(city_name,len(scenic_info)))
+        for scenic in scenic_info:
+            all_info.append(scenic)
+    with open('../data/all_info.json', 'w', encoding='utf-8') as f:
+        f.write(json.dumps(all_info))
+    print(len(all_info))
