@@ -241,7 +241,7 @@ def scenic_img_crawler(scenic_id, scenic_info_parser):
     return scenic_info_parser.photo_parser(response.text)
 
 
-def scenic_info_crawler(scenic, scenic_info_parser,time=0):
+def scenic_info_crawler(scenic, scenic_info_parser, time=0):
     print('正在获取景点：{0}的信息'.format(scenic['title']))
     scenic_id = scenic_tools.get_scenic_info(scenic['href'])
     try:
@@ -254,7 +254,7 @@ def scenic_info_crawler(scenic, scenic_info_parser,time=0):
         print(e)
         if time > 30:
             return scenic
-        scenic_info_crawler(scenic, scenic_info_parser,time + 1)
+        scenic_info_crawler(scenic, scenic_info_parser, time + 1)
 
 
 def inside_scenic_crawler(scenic_id, scenic_info_parser):
@@ -290,6 +290,16 @@ def city_scenic_crawler(city_, scenic_info_parser):
     return {'scenic_info_list': scenic_info_list, 'city': city_['city_name']}
 
 
+def fault_scenic_download(city_name, scenic_info_parser):
+    print('正在下载城市{0}的景点'.format(city_name))
+    with open('../data/fault_download/' + city_name + '.json', 'r', encoding='utf-8') as f:
+        scenic_list = json.loads(f.read())
+    for index_ in range(0, len(scenic_list)):
+        scenic_list[index_] = scenic_info_crawler(scenic_list[index_], scenic_info_parser)
+    with open('../data/fault_download/' + city_name + '.json', 'w', encoding='utf-8') as f:
+        f.write(json.dumps(scenic_list))
+
+
 if __name__ == '__main__':
     # common : http://www.mafengwo.cn/jd/id/gonglve.html
     city_list = [
@@ -309,6 +319,10 @@ if __name__ == '__main__':
         {"湘西": r'13287'}
     ]
     city_parser = ScenicInfoParser()
+    for city in city_list:
+        for key in city.keys():
+            city_name = key
+        fault_scenic_download(city_name, city_parser)
     """
     url = r'http://www.mafengwo.cn/poi/321.html?type=3'
     print(json.dumps(city_scenic_crawler(city_list[0])))
@@ -321,8 +335,8 @@ if __name__ == '__main__':
         # proxy_pool = ProxyPool(1)
         print(top_five_city_crawler(index, city_parser))
     """
-    # """ 多进程获取，获取top5和热门景点
-    proxy = ProxyPool(70)
+    """ 多进程获取，获取top5和热门景点
+    # proxy = ProxyPool(70)
     pool = Pool(processes=14)
     for city in city_list:
         # scenic_info_callback(city_scenic_crawler(city, city_parser))
@@ -332,4 +346,4 @@ if __name__ == '__main__':
             callback=scenic_info_callback)
     pool.close()
     pool.join()
-    # """
+    """

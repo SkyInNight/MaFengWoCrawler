@@ -10,15 +10,16 @@ def check_name_in_dir(name, dir_list):
 
 
 def check_download(city_name):
-    list = get_scenic_url('怀化')
+    list = get_scenic_url(city_name)
     scenic_list = list['scenic_list']
-    with open('../data/all_scenic_info/怀化.json', 'r', encoding='utf-8') as f:
+    with open('../data/all_scenic_info/'+city_name+'.json', 'r', encoding='utf-8') as f:
         download_data = f.read()
     download_list = json.loads(download_data)
     fault_list = []
     for scenic in scenic_list:
         if not check_name_in_dir(scenic['title'], download_list):
             fault_list.append(scenic)
+    print('城市{0},下载失败景点个数{1}，全部景点个数{2}'.format(city_name, len(fault_list), len(scenic_list)))
     with open('../data/fault_download/'+city_name+'.json', 'a+', encoding='utf-8') as f:
         f.write(json.dumps(fault_list))
 
