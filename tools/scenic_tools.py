@@ -75,10 +75,8 @@ def get_scenic_info(scenic_url):
 
 
 def get_scenic_url(city_name):
-    all_url_list = []
     top_scenic_list = []
     all_scenic_list = []
-    result_scenic_list = []
     with open('../data/' + city_name + '.json', 'r', encoding='utf-8') as f:
         while True:
             line = f.readline().replace('\n', '')
@@ -91,6 +89,12 @@ def get_scenic_url(city_name):
             if line is None or line == "":
                 break
             all_scenic_list.append(json.loads(line))
+    return combine_scenic_url(top_scenic_list, all_scenic_list)
+
+
+def combine_scenic_url(top_scenic_list, all_scenic_list):
+    all_url_list = []
+    result_scenic_list = []
     for top_scenic in top_scenic_list:
         for scenic in top_scenic:
             if 'current_url_list' in scenic:

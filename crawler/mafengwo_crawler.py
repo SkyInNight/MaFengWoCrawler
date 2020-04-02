@@ -6,8 +6,8 @@ from multiprocessing.pool import Pool
 import requests
 from fake_useragent import UserAgent
 
-from html_parser.mafengwo_parser import AllScenicParser, ScenicInfoParser
-from tools import scenic_tools
+from html_parser.mafengwo_parser import ScenicInfoParser
+from tools import scenic_tools, scenic_file_tools
 from tools.proxy_pool import ProxyPool, ProxyManager
 from tools.read_js import read_js, parse_js
 
@@ -90,33 +90,13 @@ def top_five_city_crawler(city_, parser_, open_proxy=False, default_proxy=2):
         proxy_manager_ = ProxyManager(proxy_pool_.get_ip_list(default_proxy))
     # try:
     response = crawler(url, proxy_manager_, headers)
-    result = parser_.parser(response.text)
+    result = parser_.top_five_city_parser(response.text)
     for index_ in result:
         for key in index_.keys():
             if key != 'current_url_list':
                 index_['city'] = city_name
                 break
     return result
-
-
-def callbacks(arg):
-    file_name = ""
-    for index_ in arg:
-        file_name = index_['city']
-        break
-    current_url_list = []
-    with open('../data/' + file_name + '.json', 'w', encoding="utf-8") as output:
-        scenic_info_list = []
-        for index_ in range(len(arg)):
-            """
-            if index_ == len(arg) - 1:
-            current_url_list = arg[index_]['current_url_list']
-                break
-            """
-            scenic_info_list.append(arg[index_])
-        output.write(json.dumps(scenic_info_list) + '\n')
-    # with open('../data/exist_url.json', 'a+', encoding='utf-8') as output:
-    #     output.write(json.dumps(current_url_list))
 
 
 def all_scenic_crawler(city_, parser_, open_proxy=False, default_proxy=2):
@@ -155,7 +135,7 @@ def all_scenic_crawler(city_, parser_, open_proxy=False, default_proxy=2):
                 output.write('城市：{0}，页数{1}，下载失败'.format(city_id, index_) + '\n')
             continue
         html = json.loads(response.text)['data']['list']
-        result = parser_.parser(html)
+        result = parser_.scenic_list_parser(html)
         for j in result:
             for key in j.keys():
                 if key != 'current_url_list':
@@ -164,17 +144,6 @@ def all_scenic_crawler(city_, parser_, open_proxy=False, default_proxy=2):
         scenic_list.append(result)
     scenic_list.append({'city': city_name})
     return scenic_list
-
-
-def scenic_callback(arg):
-    city_name = arg[len(arg) - 1]['city']
-    with open('../data/all/' + city_name + '.json', 'a+', encoding='utf-8') as output:
-        output.write(json.dumps(arg) + "\n")
-
-
-def scenic_info_callback(arg):
-    with open('../data/all_scenic_info/' + arg['city'] + '.json', 'a+', encoding='utf-8') as output:
-        output.write(json.dumps(arg['scenic_info_list']) + "\n")
 
 
 def scenic_location_crawler(scenic_id):
@@ -281,9 +250,10 @@ def inside_scenic_crawler(scenic_id, scenic_info_parser):
     return insider_scenic_list
 
 
-def city_scenic_crawler(city_, scenic_info_parser):
+def city_scenic_crawler(city_, scenic_info_parser, top_scenic_list, all_scenic_list):
     city_ = scenic_tools.get_city_info(city_)
-    scenic_list = scenic_tools.get_scenic_url(city_['city_name'])
+    # scenic_list = scenic_tools.get_scenic_url(city_['city_name'])
+    scenic_list = scenic_tools.combine_scenic_url(top_scenic_list, all_scenic_list)
     scenic_info_list = scenic_list['scenic_list']
     for index_ in range(0, len(scenic_info_list)):
         scenic_info_list[index_] = scenic_info_crawler(scenic_info_list[index_], scenic_info_parser)
@@ -307,7 +277,12 @@ def fault_download_callback(arg):
 
 
 def get_city_scenic(city_, scenic_info_parser):
-    city_scenic_crawler(city_, scenic_info_parser)
+    print('正在爬取当前城市{0}的top five景点'.format(city_))
+    top_scenic_list = top_five_city_crawler(city_, scenic_info_parser)
+    print('正在爬取当前城市{0}的全部景点'.format(city_))
+    all_scenic_list = all_scenic_crawler(city_, scenic_info_parser)
+    result = city_scenic_crawler(city_, scenic_info_parser, top_scenic_list, all_scenic_list)
+    return result
 
 
 if __name__ == '__main__':
@@ -329,10 +304,8 @@ if __name__ == '__main__':
         {"湘西": r'13287'}
     ]
     city_parser = ScenicInfoParser()
-    # for city in city_list:
-    #     for key in city.keys():
-    #         city_name = key
-    #     fault_scenic_download(city_name, city_parser)
+    for city in city_list:
+        get_city_scenic(city, city_parser)
     """
     url = r'http://www.mafengwo.cn/poi/321.html?type=3'
     print(json.dumps(city_scenic_crawler(city_list[0])))
@@ -345,7 +318,7 @@ if __name__ == '__main__':
         # proxy_pool = ProxyPool(1)
         print(top_five_city_crawler(index, city_parser))
     """
-    # """ 多进程获取，获取top5和热门景点
+    """ 多进程获取，获取top5和热门景点
     # proxy = ProxyPool(70)
     pool = Pool(processes=14)
     for city in city_list:
@@ -353,9 +326,9 @@ if __name__ == '__main__':
             city_name = key
         # scenic_info_callback(city_scenic_crawler(city, city_parser))
         pool.apply_async(
-            func=fault_scenic_download,
-            args=(city_name,city_parser),
-            callback=fault_download_callback)
+            func=get_city_scenic,
+            args=(city, city_parser),
+            callback=scenic_file_tools.scenic_info_callback)
     pool.close()
     pool.join()
-    # """
+    """

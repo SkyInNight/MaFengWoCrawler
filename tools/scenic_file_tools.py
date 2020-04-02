@@ -21,6 +21,37 @@ def set_inside_scenic(city_name):
         f.write(json.dumps(scenic_info_list))
 
 
+def scenic_callback(arg):
+    city_name = arg[len(arg) - 1]['city']
+    with open('../data/all/' + city_name + '.json', 'a+', encoding='utf-8') as output:
+        output.write(json.dumps(arg) + "\n")
+
+
+def scenic_info_callback(arg):
+    with open('../data/all_scenic_info/' + arg['city'] + '.json', 'a+', encoding='utf-8') as output:
+        output.write(json.dumps(arg['scenic_info_list']) + "\n")
+
+
+def save_top_five_scenic(arg):
+    file_name = ""
+    for index_ in arg:
+        file_name = index_['city']
+        break
+    current_url_list = []
+    with open('../data/' + file_name + '.json', 'w', encoding="utf-8") as output:
+        scenic_info_list = []
+        for index_ in range(len(arg)):
+            """
+            if index_ == len(arg) - 1:
+            current_url_list = arg[index_]['current_url_list']
+                break
+            """
+            scenic_info_list.append(arg[index_])
+        output.write(json.dumps(scenic_info_list) + '\n')
+    # with open('../data/exist_url.json', 'a+', encoding='utf-8') as output:
+    #     output.write(json.dumps(current_url_list))
+
+
 if __name__ == '__main__':
     city_list = [
         {"长沙": r'10466'},
