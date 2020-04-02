@@ -2,14 +2,14 @@
 import json
 
 
-def check_inside_scenic(scenic, dir_list):
+def check_inside_scenic(scenic_, dir_list):
     for index_ in dir_list:
         inside_scenic_list = index_['inside_scenic']
         for inside_scenic in inside_scenic_list:
-            if scenic['title'] == inside_scenic['title']:
+            if scenic_['title'] == inside_scenic['title']:
                 print('景点{0},为景点{1}的内部景点'.format(inside_scenic['title'], index_['title']))
-                scenic['type'] = index_['title']
-    return scenic
+                scenic_['type'] = index_['title']
+    return scenic_
 
 
 def set_inside_scenic(city_name):

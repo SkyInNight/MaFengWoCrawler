@@ -306,6 +306,10 @@ def fault_download_callback(arg):
         f.write(json.dumps(arg['scenic_list']))
 
 
+def get_city_scenic(city_, scenic_info_parser):
+    city_scenic_crawler(city_, scenic_info_parser)
+
+
 if __name__ == '__main__':
     # common : http://www.mafengwo.cn/jd/id/gonglve.html
     city_list = [
